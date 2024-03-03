@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-import geopandas as gpd
+#import geopandas as gpd
 import rasterio as rio
 import numpy as np
-from osgeo import gdal
-import pandas as pd
+#from osgeo import gdal
+#import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
 #fukushima_shp = gpd.read_file(r'C:\Users\jiunc\OneDrive\Desktop\FYP\Tsukuba data\Shp\FukushimaPref.shp')
 
@@ -54,6 +55,26 @@ def normalizing(data):
     max_val = np.max(data)
     data_normalized = (data - min_val) / (max_val - min_val)
     return data_normalized
+
+def get_patch(array, size=256):
+    patch_list = []
+    height, width, _ = array.shape
+    for i in range(0, height, size):
+        for j in range(0, width, size):
+            patch = array[i:i+size, j:j+size, :]
+            if patch.shape[0] == size and patch.shape[1] == size:
+                patch_list.append(patch)
+    return patch_list
+
+def get_patch2(array, size=256):
+    patch_list = []
+    height, width = array.shape
+    for i in range(0, height, size):
+        for j in range(0, width, size):
+            patch = array[i:i+size, j:j+size] #The diff with above func is that this make it 2D array
+            if patch.shape[0] == size and patch.shape[1] == size:
+                patch_list.append(patch)
+    return patch_list
 
 
 elec_demand = rio.open(r'C:\Users\jiunc\OneDrive\Desktop\FYP\Tsukuba data\square data\2SquareElec.tif')
@@ -122,17 +143,73 @@ print("wind norm:", np.unique(Wind_speed_norm))
 
 #Prepare to stack all 9 criteria map together as 1 input
 input_data = np.stack((elec_demand_norm, Interest_spot_norm, Land_price_norm,
-                       Natural_environment_norm, Roads_norm, Elevation_norm,
-                       Transmission_line_norm, Urban_area_norm, Wind_speed_norm), axis=-1)
+                        Natural_environment_norm, Roads_norm, Elevation_norm,
+                        Transmission_line_norm, Urban_area_norm, Wind_speed_norm), axis=-1)
 
 print("Shape of input data:", input_data.shape)
 
-#Preparing output data
-Suitable = rio.open(r'C:\Users\jiunc\OneDrive\Desktop\FYP\Tsukuba data\square data\2SquareResult.tif')
-Suitable_data = Suitable.read(1)
-print("Suitable location for wind farm:", np.unique(Suitable_data)) 
-plt.imshow(Suitable_data, cmap = None)
-plt.title("suitable") 
+#Prepare output data, the result
+result_im = rio.open(r'C:\Users\jiunc\OneDrive\Desktop\FYP\Tsukuba data\square data\2SquareResult.tif')
+result_data = result_im.read(1)
+print("result:", np.unique(result_data)) 
+print("Shape of result data:", result_data.shape)
+
+
+# #Combine the result raster as well
+# combined = np.stack((elec_demand_norm, Interest_spot_norm, Land_price_norm,
+#                         Natural_environment_norm, Roads_norm, Elevation_norm,
+#                         Transmission_line_norm, Urban_area_norm, Wind_speed_norm,
+#                         output_data), axis=-1)
+# print("Shape of combined data:", combined.shape)
+
+# #remove result from combined, turn into testingNP 
+# testingNP = np.delete(combined, -1, axis=2)
+# print("Shape of testingNP :", testingNP.shape)
+
+#Split input data(4096x4096x9 into a 256x256x9 array, and store in input_patches, should have 256 array in the list)
+input_patches = get_patch(input_data)
+#same goes for result
+result_patches = get_patch2(result_data)
+
+
+#Turn the lists into a numpy array 
+input_patches_array = np.array(input_patches)
+result_patches_array = np.array(result_patches)
+
+
+#Now split them to training sets 
+#training+validation get 80%, whereas testing get 20%
+x_train_val, x_test, y_train_val, y_test = train_test_split(input_patches_array, result_patches_array, test_size=0.2, random_state=42)
+#Now traning and validation got 80%, we split them into 25%, meaning:
+#training 64%, vali 16%, test 20%
+x_train, x_val, y_train, y_val = train_test_split(x_train_val, y_train_val, test_size=0.25, random_state=42)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
