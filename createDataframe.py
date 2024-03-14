@@ -4,8 +4,10 @@ import rasterio as rio
 import numpy as np
 #from osgeo import gdal
 #import pandas as pd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MacPooling2D, Flatten, Dense, Dropout
 
 #fukushima_shp = gpd.read_file(r'C:\Users\jiunc\OneDrive\Desktop\FYP\Tsukuba data\Shp\FukushimaPref.shp')
 
@@ -181,7 +183,7 @@ result_patches_array = np.array(result_patches)
 #training+validation get 80%, whereas testing get 20%
 x_train_val, x_test, y_train_val, y_test = train_test_split(input_patches_array, result_patches_array, test_size=0.2, random_state=42)
 #Now traning and validation got 80%, we split them into 25%, meaning:
-#training 64%, vali 16%, test 20%
+#training 60%, vali 20%, test 20%
 x_train, x_val, y_train, y_val = train_test_split(x_train_val, y_train_val, test_size=0.25, random_state=42)
 
 
